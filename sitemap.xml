@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+    <url>
+        <loc>http://yoursite.com/blog/2007/11/23/conferencia-rails-2007/</loc>
+        <lastmod>2014-03-30T20:17:28-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/blog/2009/05/11/euruko-2009-is-over/</loc>
+        <lastmod>2014-03-29T17:17:59-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/blog/2009/11/27/cassandra-and-ruby/</loc>
+        <lastmod>2014-03-30T20:20:05-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/blog/2010/11/05/neo4j-and-jruby/</loc>
+        <lastmod>2014-03-30T01:02:34-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/blog/archives/</loc>
+        <lastmod>2014-03-30T20:20:05-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/</loc>
+        <lastmod>2014-03-30T20:20:05-07:00</lastmod>
+    </url>
+    <url>
+        <loc>http://yoursite.com/robots.txt</loc>
+        <lastmod>2014-03-24T01:23:29-07:00</lastmod>
+    </url>
+</urlset>
