@@ -21,8 +21,8 @@ subscribe_email:
 # RSS feeds can list your email address if you like
 email:
 
-page:
-- sharing: false
+# Gravatar
+gravatar_email: pablete@gmail.com
 
 # Linkedin
 linkedin_user: pabloadelgado
