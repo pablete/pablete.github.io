@@ -2,10 +2,10 @@
 #      Main Configs       #
 # ----------------------- #
 
-url: http://yoursite.com
-title: My Octopress Blog
-subtitle: A blogging framework for hackers.
-author: Your Name
+url: http://pablete.github.io
+title: "Share what you know"
+subtitle: "Learn what you don't"
+author: Pablo Delgado
 simple_search: https://www.google.com/search
 description:
 
@@ -21,6 +21,23 @@ subscribe_email:
 # RSS feeds can list your email address if you like
 email:
 
+page:
+- sharing: false
+
+# Linkedin
+linkedin_user: pabloadelgado
+
+# Navigation
+navigation:
+- text: Blog
+  url: /
+- text: Archives
+  url: /blog/archives
+
+
+
+
+#
 # ----------------------- #
 #    Jekyll & Plugins     #
 # ----------------------- #
@@ -33,7 +50,7 @@ destination: public
 plugins: plugins
 code_dir: downloads/code
 category_dir: blog/categories
-markdown: rdiscount
+markdown: kramdown
 rdiscount:
   extensions:
     - autolink
@@ -63,13 +80,13 @@ default_asides: [asides/recent_posts.html, asides/github.html, asides/delicious.
 # ----------------------- #
 
 # Github repositories
-github_user:
+github_user: pablete
 github_repo_count: 0
 github_show_profile_link: true
 github_skip_forks: true
 
 # Twitter
-twitter_user:
+twitter_user: pablete
 twitter_tweet_button: true
 
 # Google +1
@@ -90,11 +107,11 @@ delicious_user:
 delicious_count: 3
 
 # Disqus Comments
-disqus_short_name:
-disqus_show_comment_count: false
+disqus_short_name: pablete
+disqus_show_comment_count: true
 
 # Google Analytics
-google_analytics_tracking_id:
+google_analytics_tracking_id: UA-305974-2
 
 # Facebook Like
 facebook_like: false
