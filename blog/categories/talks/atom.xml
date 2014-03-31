@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: talks | Share what you know]]></title>
-  <link href="http://yoursite.com/blog/categories/talks/atom.xml" rel="self"/>
-  <link href="http://yoursite.com/"/>
-  <updated>2014-03-30T20:26:50-07:00</updated>
-  <id>http://yoursite.com/</id>
+  <link href="http://pablete.github.io/blog/categories/talks/atom.xml" rel="self"/>
+  <link href="http://pablete.github.io/"/>
+  <updated>2014-03-30T20:37:02-07:00</updated>
+  <id>http://pablete.github.io/</id>
   <author>
     <name><![CDATA[Pablo Delgado]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Neo4j for Ruby on Rails]]></title>
-    <link href="http://yoursite.com/blog/2010/11/05/neo4j-and-jruby/"/>
+    <link href="http://pablete.github.io/blog/2010/11/05/neo4j-and-jruby/"/>
     <updated>2010-11-05T12:00:00-07:00</updated>
-    <id>http://yoursite.com/blog/2010/11/05/neo4j-and-jruby</id>
+    <id>http://pablete.github.io/blog/2010/11/05/neo4j-and-jruby</id>
     <content type="html"><![CDATA[<p>“Neo4j is a graph database. It is an embedded, disk-based, fully transactional Java persistence engine that stores data structured in graphs rather than in tables. A graph (mathematical lingo for a network) is a flexible data structure that allows a more agile and rapid style of development.”</p>
 
 <p>Neo4j allows you to map objects to nodes and relations, that is a more natural fit than mapping them to relational tables.
@@ -55,9 +55,9 @@ Modeling with elements of a graph is substantially faster for semi­structured d
   
   <entry>
     <title type="html"><![CDATA[Cassandra and Ruby. Conferencia Rails. Madrid 2009]]></title>
-    <link href="http://yoursite.com/blog/2009/11/27/cassandra-and-ruby/"/>
+    <link href="http://pablete.github.io/blog/2009/11/27/cassandra-and-ruby/"/>
     <updated>2009-11-27T17:30:00-08:00</updated>
-    <id>http://yoursite.com/blog/2009/11/27/cassandra-and-ruby</id>
+    <id>http://pablete.github.io/blog/2009/11/27/cassandra-and-ruby</id>
     <content type="html"><![CDATA[<p>I been speaking about Apache Cassandra database at the Spanish Rails Confenrence 2009.</p>
 
 <p>The title of my talk was <a href="http://app.conferenciarails.org/talks/42-cassandra-db-que-tienen-facebook-twitter-y-digg-en-comun">Cassandra DB: ¿Qué tienen Facebook, Twitter y Digg en común?</a></p>
@@ -82,9 +82,9 @@ Modeling with elements of a graph is substantially faster for semi­structured d
   
   <entry>
     <title type="html"><![CDATA[Euruko 2009 is over]]></title>
-    <link href="http://yoursite.com/blog/2009/05/11/euruko-2009-is-over/"/>
+    <link href="http://pablete.github.io/blog/2009/05/11/euruko-2009-is-over/"/>
     <updated>2009-05-11T12:00:00-07:00</updated>
-    <id>http://yoursite.com/blog/2009/05/11/euruko-2009-is-over</id>
+    <id>http://pablete.github.io/blog/2009/05/11/euruko-2009-is-over</id>
     <content type="html"><![CDATA[<p>Euruko 2009 conference in Barcelona, Spain was excelent! The venue was really good. Everything was very well organized by the great people of the SRUG.</p>
 
 <p>My favorite talks were:</p>
@@ -113,9 +113,9 @@ Modeling with elements of a graph is substantially faster for semi­structured d
   
   <entry>
     <title type="html"><![CDATA[Talking at Conferencia Rails. Madrid 2007]]></title>
-    <link href="http://yoursite.com/blog/2007/11/23/conferencia-rails-2007/"/>
+    <link href="http://pablete.github.io/blog/2007/11/23/conferencia-rails-2007/"/>
     <updated>2007-11-23T12:00:00-08:00</updated>
-    <id>http://yoursite.com/blog/2007/11/23/conferencia-rails-2007</id>
+    <id>http://pablete.github.io/blog/2007/11/23/conferencia-rails-2007</id>
     <content type="html"><![CDATA[<h2 id="intro">Intro</h2>
 
 <p>I escaped London for a few days to go to Conferencia Rails 2007 in Madrid. There I gave a talk about much ranted Rails Scalability.</p>
