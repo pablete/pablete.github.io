@@ -36,17 +36,16 @@
 <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic' rel='stylesheet' type='text/css'>
 
   
-  <script type="text/javascript">
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-305974-2']);
-    _gaq.push(['_trackPageview']);
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-  </script>
+  ga('create', 'UA-49574322-1', 'pablodelgado.org');
+  ga('send', 'pageview');
+
+</script>
 
 
   <!--- MathJax Configuration -->
@@ -102,6 +101,9 @@
     
 
     
+    
+    <li><a href="/atom.xml" title="RSS Feed"><i class="icon-rss-sign social-navbar"></i></a></li>
+    
 </ul>
 
   	    </div>
@@ -118,7 +120,7 @@
   <header>
   <div class="jumbotron">
     Talking at Conferencia Rails. Madrid 2007
-	<h5>
+  	<h5>
 
 
 
@@ -168,6 +170,16 @@
 <p><img src="/photos/0003_large.jpg" width="600" title="&#34;Rails stack&#34;" alt="&#34;Rails stack&#34;" /></p>
 
 
+      <span style="align:right;">
+  <p>
+    <img src="https://pbs.twimg.com/profile_images/1663232328/pablete_avatar.jpg" alt="" width="55" height="55">
+    <a href="/">Pablo Delgado</a><br />
+  Data Scientist/Engineer working at Opentable Inc.<br />
+     <a href="https://twitter.com/pablete" class="twitter-follow-button" data-show-count="true" data-lang="en">Follow @pablete</a>
+     <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+  </p>
+</span>
+
     </div>
   </div>
 
@@ -193,21 +205,6 @@
         </p>
       </div>
       
-      <div class="span6 social-sharing">
-        <div class="sharing">
-  <div class="addthis_toolbox addthis_default_style ">
-  
-  
-  <a class="addthis_button_tweet"></a>
-  
-  
-  <a class="addthis_counter addthis_pill_style"></a>
-  </div>
-  <script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid="></script>
-</div>
-
-      </div>
-      
       
     </div>
     
@@ -224,6 +221,12 @@
   </footer>
 </article>
 
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
 </div>
 
 
@@ -234,14 +237,6 @@
         <footer class="footer-page" role="contentinfo">
           <div class="content" id="small-about">
   <hr>
-  <img src="https://pbs.twimg.com/profile_images/1663232328/pablete_avatar.jpg" alt="" width="55" height="55">
-  <a href="/">Pablo Delgado</a><br />
-  Data Scienctist/Engineer working at Opentable Inc.<br />
-   <a href="https://twitter.com/pablete" class="twitter-follow-button" data-show-count="true" data-lang="en">Follow @pablete</a>
-   <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
-  </p>
-
-
   <small><span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span> - Theme by <a href="http://alexgaribay.com">Alex Garibay</a></small>
 </div>
 
@@ -256,7 +251,10 @@
       var disqus_shortname = 'pablete';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://pablete.github.io/blog/2007/11/23/conferencia-rails-2007/';
+        var disqus_url = 'http://pablete.github.io/blog/2007/11/23/conferencia-rails-2007/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
