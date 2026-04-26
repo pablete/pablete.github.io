@@ -1,0 +1,16 @@
+{{ define "main" }}
+  <h1>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }}{{ end }}</h1>
+  {{ if .IsHome }}<p class="subtitle">{{ site.Params.subtitle }}</p>{{ end }}
+  <section>
+    {{ $section := .Section }}
+    {{ if .IsHome }}{{ $section = "posts" }}{{ end }}
+    <ul>
+      {{ range (where site.RegularPages "Section" $section).ByDate.Reverse }}
+        <li>
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <span class="subtitle"> &mdash; {{ .Date.Format "January 2, 2006" }}</span>
+        </li>
+      {{ end }}
+    </ul>
+  </section>
+{{ end }}

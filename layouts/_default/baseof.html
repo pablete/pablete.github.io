@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ site.LanguageCode | default "en" }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} &middot; {{ site.Title }}{{ end }}</title>
+  <link rel="stylesheet" href="{{ "css/tufte.css" | relURL }}">
+  <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
+  {{ with .OutputFormats.Get "RSS" }}
+    <link rel="alternate" type="application/rss+xml" href="{{ .RelPermalink }}" title="{{ site.Title }}">
+  {{ end }}
+</head>
+<body>
+  <article>
+    <header>
+      <nav>
+        <a href="{{ "/" | relURL }}">{{ site.Title }}</a>
+        &middot;
+        <a href="{{ "/" | relURL }}">Home</a>
+        &middot;
+        <a href="{{ "/posts/" | relURL }}">Posts</a>
+        &middot;
+        <a href="{{ "/talks/" | relURL }}">Talks</a>
+        &middot;
+        <a href="{{ "/about/" | relURL }}">About</a>
+      </nav>
+    </header>
+    {{ block "main" . }}{{ end }}
+    <footer>
+      <p class="subtitle">
+        &copy; {{ now.Format "2006" }} {{ site.Params.author }}
+        &middot;
+        <a href="https://github.com/pablete">GitHub</a>
+        &middot;
+        <a href="https://x.com/pablete">X</a>
+        &middot;
+        <a href="https://www.linkedin.com/in/pabloadelgado/">LinkedIn</a>
+      </p>
+    </footer>
+  </article>
+</body>
+</html>

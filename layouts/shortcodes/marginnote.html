@@ -1,0 +1,4 @@
+{{- $id := .Get "id" | default (printf "mn-%s-%d" .Page.File.UniqueID .Ordinal) -}}
+<label for="{{ $id }}" class="margin-toggle">&#8853;</label>
+<input type="checkbox" id="{{ $id }}" class="margin-toggle"/>
+<span class="marginnote">{{ .Inner | .Page.RenderString | safeHTML }}</span>

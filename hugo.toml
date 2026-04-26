@@ -1,0 +1,22 @@
+baseURL = "https://pablodelgado.org/"
+languageCode = "en-us"
+title = "Share what you know"
+enableRobotsTXT = true
+
+[params]
+  subtitle = "Learn what you don't"
+  author = "Pablo Delgado"
+  description = "Pablo Delgado's blog"
+
+[permalinks]
+  talks = "/blog/:year/:month/:day/:slug/"
+  posts = "/posts/:year/:month/:day/:slug/"
+
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = false
+
+[outputs]
+  home = ["HTML", "RSS"]

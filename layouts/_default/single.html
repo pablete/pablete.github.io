@@ -1,0 +1,10 @@
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+  <p class="subtitle">{{ .Date.Format "January 2, 2006" }}</p>
+  <section>
+    {{ .Content }}
+  </section>
+  {{ with .Params.tags }}
+    <p class="subtitle">Tags: {{ delimit . ", " }}</p>
+  {{ end }}
+{{ end }}

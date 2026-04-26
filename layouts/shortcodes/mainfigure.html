@@ -1,0 +1,6 @@
+{{- $src := .Get "src" -}}
+{{- $alt := .Get "alt" | default "" -}}
+<figure>
+  <img src="{{ $src | relURL }}" alt="{{ $alt }}"/>
+  {{ with .Inner }}<figcaption>{{ . | $.Page.RenderString | safeHTML }}</figcaption>{{ end }}
+</figure>
