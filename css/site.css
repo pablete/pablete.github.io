@@ -1,0 +1,303 @@
+/* Minimal overrides on top of tufte.css.
+   --- Kami-inspired tokens applied here. To revert: delete from
+   --- "Kami tokens" through "end Kami block" comments. */
+
+/* === Kami tokens =========================================================
+   Source: https://kami.tw93.fun/  ("Good content deserves good paper")
+   Warm parchment canvas, single ink-blue accent, warm neutral ramp.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Color */
+  --canvas: #f5f4ed;          /* warm parchment */
+  --ink: #141413;             /* near-black, primary text */
+  --ink-soft: #3b3a37;        /* secondary text */
+  --stone: #6b6a64;           /* tertiary, captions, subtitle */
+  --rule: #d9d6c8;            /* hairlines on warm canvas */
+  --accent: #a00000;          /* tufte red, ≤5% of page */
+  --accent-soft: #c43a3a;
+
+  /* Type */
+  --serif: Charter, "Source Serif 4", "Source Serif Pro", Georgia,
+    "Iowan Old Style", Cambria, "Times New Roman", serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    Consolas, "Liberation Mono", monospace;
+
+  /* Shadows */
+  --ring: 0 0 0 1px var(--rule);
+  --whisper: 0 4px 24px rgba(0, 0, 0, 0.05);
+}
+
+html {
+  font-size: 13px;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--serif);
+  line-height: 1.55;
+}
+
+/* Tufte applies serif to many descendants; route them through our stack. */
+h1, h2, h3, h4, h5, h6,
+section > p, section > footer, section > table, section > dl,
+section > ol, section > ul,
+.sidenote, .marginnote,
+figcaption, p, li, table {
+  font-family: var(--serif);
+}
+
+h1 { font-weight: 500; line-height: 1.10; }
+h2 { font-weight: 500; line-height: 1.20; }
+h3 { font-weight: 500; line-height: 1.25; }
+
+.subtitle { color: var(--stone); }
+
+/* Links: ink-blue accent, no Tufte SVG underline (replaced with
+   plain underline via text-decoration). */
+a:link, a:visited {
+  color: var(--accent);
+  background: transparent;
+  text-shadow: none;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+a:hover { color: var(--accent-soft); }
+
+/* Code & pre — JetBrains Mono, ring shadow on blocks. */
+code, pre, kbd, samp {
+  font-family: var(--mono);
+}
+
+/* Code blocks: <div class="highlight"><pre class="chroma"><code>tokens</code></pre></div>.
+   We collapse all visual decoration onto ONE layer (the <pre>), and strip
+   margins/padding/backgrounds/widths from the .highlight wrapper and the
+   <code> child. The user only sees a single box. */
+.highlight {
+  margin: 1.2rem 0;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.highlight > pre,
+.highlight > pre.chroma,
+section > pre {
+  background: #eff1f5 !important;
+  background-color: #eff1f5 !important;
+  border-radius: 4px;
+  box-shadow: var(--ring);
+  margin: 0 !important;
+  padding: 0.9rem 1.1rem !important;
+  width: 55%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  border: 0;
+}
+
+.highlight > pre > code,
+section > pre > code {
+  font-size: 0.95em;
+  line-height: 1.5;
+  /* Tufte sets pre > code to its own width/margin/overflow — neutralize. */
+  width: auto;
+  margin-left: 0;
+  overflow-x: visible;
+  display: block;
+  white-space: pre;
+}
+
+/* Chroma sets `.line { display:flex }` which can squeeze long lines. Use a
+   plain block layout so each line keeps its natural width. */
+.chroma .line { display: block; }
+
+code:not(pre code) {
+  background: rgba(160, 0, 0, 0.06);
+  padding: 0 0.25em;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+/* Figures: whisper shadow + warm radius. */
+figure img {
+  border-radius: 4px;
+  box-shadow: var(--whisper);
+}
+
+/* Tables — Tufte minimal: top + header + bottom rules only, no verticals,
+   numerics right-aligned, header in small caps. */
+section > table {
+  width: 55%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  margin: 1.4rem 0;
+  font-size: 0.95em;
+}
+
+table thead tr {
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+table tbody tr:last-child {
+  border-bottom: 2px solid var(--ink);
+}
+
+table th, table td {
+  border: 0;
+  padding: 0.35rem 0.9rem 0.35rem 0;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+table th {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85em;
+  color: var(--ink-soft);
+}
+
+/* Right-align any numeric column (markdown |---:| produces text-align:right). */
+table th[align="right"], table td[align="right"] { text-align: right; }
+table th[align="center"], table td[align="center"] { text-align: center; }
+
+/* Subtle row separator on body rows (lighter than header/footer rule). */
+table tbody tr {
+  border-bottom: 1px solid var(--rule);
+}
+table tbody tr:last-child {
+  border-bottom: 2px solid var(--ink);
+}
+
+/* Hairline at footer becomes warm rule. */
+article > footer {
+  margin-top: 4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+article > footer .subtitle {
+  font-size: 1rem;
+}
+
+/* Sidenote number takes the accent. */
+.sidenote-number:after,
+.sidenote:before {
+  color: var(--accent);
+}
+
+/* === end Kami block ====================================================== */
+
+article > header nav {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  color: var(--stone);
+}
+
+article > header nav a {
+  color: var(--ink);
+  text-decoration: none;
+  background: transparent;
+  text-shadow: none;
+}
+
+article > header nav a:hover {
+  text-decoration: underline;
+  color: var(--accent);
+}
+
+ul li {
+  margin: 0.4rem 0;
+}
+
+.talks-list li {
+  margin: 0.7rem 0;
+}
+
+.talks-list .talk-event {
+  color: var(--stone);
+  font-style: italic;
+  margin-left: 6.5rem;       /* indent under the title, past the [YYYY-MM-DD] */
+  font-size: 0.9em;
+}
+
+/* Canonical main-column class — Tufte's central body/text-block width.
+   Apply to any block (video embeds, custom shortcodes, etc.) that should
+   sit inside the same column as paragraphs. */
+.main-column {
+  width: 55%;
+  box-sizing: border-box;
+  margin-left: 0;
+}
+
+/* Responsive 16:9 wrapper used by youtube/vimeo/slideshare shortcodes.
+   Sized to Tufte's .fullwidth (90% of body — spans serif column + margin). */
+.video-embed {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 90%;
+  max-width: 100%;
+  margin: 1.4rem 0;
+}
+
+.video-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+iframe {
+  max-width: 100%;
+}
+
+/* Photo gallery — set N images side-by-side, sized to .fullwidth (90%).
+   `cols` (default 3) is the desktop max; auto-fit collapses on narrow
+   screens so images stay legible.
+
+   Markdown image inside renders as <p><img></p>; we strip the paragraph
+   and the figure/img margin so the grid is tight. */
+.gallery {
+  width: 90%;
+  display: grid;
+  grid-template-columns: repeat(var(--gallery-cols, 3),
+    minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 1.4rem 0;
+}
+
+@media (max-width: 900px) {
+  .gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gallery > p {
+  margin: 0;
+  width: 100%;
+}
+
+.gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  aspect-ratio: 4 / 3;
+  display: block;
+  margin: 0;
+  border-radius: 4px;
+  box-shadow: var(--whisper);
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Rails on Share what you know</title><link>https://pablodelgado.org/tags/rails/</link><description>Recent content in Rails on Share what you know</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 27 Nov 2009 17:30:00 +0000</lastBuildDate><atom:link href="https://pablodelgado.org/tags/rails/index.xml" rel="self" type="application/rss+xml"/><item><title>Cassandra and Ruby</title><link>https://pablodelgado.org/blog/2009/11/27/cassandra-and-ruby/</link><pubDate>Fri, 27 Nov 2009 17:30:00 +0000</pubDate><guid>https://pablodelgado.org/blog/2009/11/27/cassandra-and-ruby/</guid><description>&lt;p&gt;I been speaking about Apache Cassandra database at the Spanish Rails Confenrence 2009.&lt;/p&gt;
+&lt;p&gt;The title of my talk was &lt;a href="http://app.conferenciarails.org/talks/42-cassandra-db-que-tienen-facebook-twitter-y-digg-en-comun"&gt;Cassandra DB: ¿Qué tienen Facebook, Twitter y Digg en común?&lt;/a&gt;&lt;/p&gt;
+&lt;div class="video-embed"&gt;
+ &lt;iframe src="https://player.vimeo.com/video/11974292" allowfullscreen
+ title="Vimeo video" loading="lazy"&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;div class="video-embed"&gt;
+ &lt;iframe src="https://drive.google.com/file/d/1yFWF63l4-BUx2h704kTICMVvcbbhXvgb/preview"
+ allowfullscreen loading="lazy" title="Google Drive PDF preview"&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Here are some photos of the talk:&lt;/p&gt;
+&lt;div class="gallery" style="--gallery-cols: 3;"&gt;
+&lt;img src="0009_large.jpg" alt="Pablo Delgado Cassandra and Ruby: With the microphone"&gt;
+&lt;img src="0010_large.jpg" alt="Pablo Delgado Cassandra and Ruby: Cassandra"&gt;
+&lt;img src="0011_large.jpg" alt="Pablo Delgado Cassandra and Ruby: Why Cassandra"&gt;
+&lt;img src="0012_large.jpg" alt="Pablo Delgado Cassandra and Ruby: From far away"&gt;
+&lt;/div&gt;</description></item><item><title>Rails Scalability</title><link>https://pablodelgado.org/blog/2007/11/23/rails-scalability/</link><pubDate>Fri, 23 Nov 2007 12:00:00 +0000</pubDate><guid>https://pablodelgado.org/blog/2007/11/23/rails-scalability/</guid><description>&lt;h2 id="intro"&gt;Intro&lt;/h2&gt;
+&lt;p&gt;I escaped London for a few days to go to Conferencia Rails 2007 in Madrid. There I gave a talk about much ranted Rails Scalability.&lt;/p&gt;
+&lt;p&gt;The title of the talk in spanish was &amp;ldquo;Escalabilidad y las cosas de las que nadie se atrevio a hablar&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;Summary of the talk:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Architecture and typical Rails deployment configurations.&lt;/li&gt;
+&lt;li&gt;Use of Nginx as a static assets server.&lt;/li&gt;
+&lt;li&gt;Mongrel and Evented Mongrel.&lt;/li&gt;
+&lt;li&gt;Multithreaded image Uploads with mongrel and/or merb (instead of attatchment_fu)&lt;/li&gt;
+&lt;li&gt;Activerecord optimizations (hacks, active_record_context plugin)&lt;/li&gt;
+&lt;li&gt;Caches, pasive expirations. Cache observing daemons.&lt;/li&gt;
+&lt;li&gt;Configuration and monitoring of a production Server. (monit, munin tools)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Here is the video of the talk, and of course, the slides.&lt;/p&gt;</description></item></channel></rss>

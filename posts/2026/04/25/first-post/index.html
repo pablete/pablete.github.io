@@ -1,0 +1,208 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance: a Worklog &#183; Share what you know</title><link rel=stylesheet href=/css/tufte.css><link rel=stylesheet href=/css/chroma.css><link rel=stylesheet href=/css/site.css></head><body><article><header><nav><a href=/>Share what you know</a>
+&#183;
+<a href=/>Home</a>
+&#183;
+<a href=/talks/>Talks</a>
+&#183;
+<a href=/arxiv/>arXiv</a>
+&#183;
+<a href=/about/>About</a></nav></header><h1>How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance: a Worklog</h1><p class=subtitle>April 25, 2026</p><section><p>In this post, I&rsquo;ll iteratively optimize an implementation of matrix multiplication
+written in CUDA.<label for=sn-44602fdfdbc819199a0a4d6fcb203a4d-0 class="margin-toggle sidenote-number"></label>
+<input type=checkbox id=sn-44602fdfdbc819199a0a4d6fcb203a4d-0 class=margin-toggle>
+<span class=sidenote>This post is a recreation of <a href=https://siboehm.com/articles/22/CUDA-MMM>Si Boehm&rsquo;s excellent
+worklog</a>, used here as a template to
+demonstrate Tufte-CSS features: side notes, margin notes, side figures,
+full-width figures, code blocks, and references.</span>
+My goal is not to build a cuBLAS replacement, but to deeply understand the most
+important performance characteristics of the GPUs that are used for modern deep
+learning. This includes coalescing global memory accesses, shared memory caching
+and occupancy optimizations, among others.</p><p>Matrix multiplication on GPUs may currently be the most important algorithm
+that exists, considering it makes up almost all the FLOPs during the training
+and inference of large deep-learning models. So how much work is it to write a
+performant CUDA SGEMM<label for=sn-44602fdfdbc819199a0a4d6fcb203a4d-1 class="margin-toggle sidenote-number"></label>
+<input type=checkbox id=sn-44602fdfdbc819199a0a4d6fcb203a4d-1 class=margin-toggle>
+<span class=sidenote><em>SGEMM</em> performs <code>C = α·A·B + β·C</code> at
+single (32-bit) precision.</span>
+from scratch? I&rsquo;ll start with a
+naive kernel and apply optimizations step-by-step until we get within 95% (on
+a good day) of the performance of NVIDIA&rsquo;s closed-source cuBLAS:</p><table><thead><tr><th>Kernel</th><th style=text-align:right>GFLOPs/s</th><th style=text-align:right>Performance vs. cuBLAS</th></tr></thead><tbody><tr><td>1: Naive</td><td style=text-align:right>309.0</td><td style=text-align:right>1.3%</td></tr><tr><td>2: GMEM Coalescing</td><td style=text-align:right>1,986.5</td><td style=text-align:right>8.5%</td></tr><tr><td>3: SMEM Caching</td><td style=text-align:right>2,980.3</td><td style=text-align:right>12.8%</td></tr><tr><td>4: 1D Blocktiling</td><td style=text-align:right>8,474.7</td><td style=text-align:right>36.5%</td></tr><tr><td>5: 2D Blocktiling</td><td style=text-align:right>15,971.7</td><td style=text-align:right>68.7%</td></tr><tr><td>6: Vectorized Mem</td><td style=text-align:right>18,237.3</td><td style=text-align:right>78.4%</td></tr><tr><td>9: Autotuning</td><td style=text-align:right>19,721.0</td><td style=text-align:right>84.8%</td></tr><tr><td>10: Warptiling</td><td style=text-align:right>21,779.3</td><td style=text-align:right>93.7%</td></tr><tr><td>0: cuBLAS</td><td style=text-align:right>23,249.6</td><td style=text-align:right>100.0%</td></tr></tbody></table><h2 id=kernel-1-naive-implementation>Kernel 1: Naive Implementation</h2><p>In the CUDA programming model, computation is ordered in a three-level
+hierarchy. Each invocation of a CUDA kernel creates a new <em>grid</em>, which
+consists of multiple <em>blocks</em>. Each block consists of up to 1024 individual
+<em>threads</em>.<label for=mn-44602fdfdbc819199a0a4d6fcb203a4d-2 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=mn-44602fdfdbc819199a0a4d6fcb203a4d-2 class=margin-toggle>
+<span class=marginnote>Threads in the same block have access to the same
+shared memory region (SMEM).</span>
+Threads that are in the same
+block have access to the same shared memory region (SMEM).</p><p>The number of threads in a block is configurable, usually a multiple of 32.
+The number of blocks in a grid depends on the size of the data.</p><figure><label for=sf-44602fdfdbc819199a0a4d6fcb203a4d-3 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=sf-44602fdfdbc819199a0a4d6fcb203a4d-3 class=margin-toggle>
+<span class=marginnote>Each thread computes one element of <code>C</code> by reading a row of <code>A</code> and a column
+of <code>B</code>.</span>
+<img src=https://siboehm.com/assets/img/CUDA-MMM/CUDA_thread_hierarchy.png alt="Naive kernel: each thread computes one C entry"></figure><p>Let&rsquo;s start by writing the most naive kernel: one thread per output entry of
+<code>C</code>. The launch looks like this:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=c1>// create as many blocks as necessary to map all of C
+</span></span></span><span class=line><span class=cl><span class=n>dim3</span> <span class=nf>gridDim</span><span class=p>(</span><span class=n>CEIL_DIV</span><span class=p>(</span><span class=n>M</span><span class=p>,</span> <span class=mi>32</span><span class=p>),</span> <span class=n>CEIL_DIV</span><span class=p>(</span><span class=n>N</span><span class=p>,</span> <span class=mi>32</span><span class=p>),</span> <span class=mi>1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=c1>// 32 * 32 = 1024 thread per block
+</span></span></span><span class=line><span class=cl><span class=n>dim3</span> <span class=nf>blockDim</span><span class=p>(</span><span class=mi>32</span><span class=p>,</span> <span class=mi>32</span><span class=p>,</span> <span class=mi>1</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=n>sgemm_naive</span><span class=o>&lt;&lt;&lt;</span><span class=n>gridDim</span><span class=p>,</span> <span class=n>blockDim</span><span class=o>&gt;&gt;&gt;</span><span class=p>(</span><span class=n>M</span><span class=p>,</span> <span class=n>N</span><span class=p>,</span> <span class=n>K</span><span class=p>,</span> <span class=n>alpha</span><span class=p>,</span> <span class=n>A</span><span class=p>,</span> <span class=n>B</span><span class=p>,</span> <span class=n>beta</span><span class=p>,</span> <span class=n>C</span><span class=p>);</span>
+</span></span></code></pre></div><p>The kernel body computes the dot product of one row of <code>A</code> with one column of
+<code>B</code>:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>__global__</span> <span class=kt>void</span> <span class=nf>sgemm_naive</span><span class=p>(</span><span class=kt>int</span> <span class=n>M</span><span class=p>,</span> <span class=kt>int</span> <span class=n>N</span><span class=p>,</span> <span class=kt>int</span> <span class=n>K</span><span class=p>,</span> <span class=kt>float</span> <span class=n>alpha</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                            <span class=k>const</span> <span class=kt>float</span> <span class=o>*</span><span class=n>A</span><span class=p>,</span> <span class=k>const</span> <span class=kt>float</span> <span class=o>*</span><span class=n>B</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>                            <span class=kt>float</span> <span class=n>beta</span><span class=p>,</span> <span class=kt>float</span> <span class=o>*</span><span class=n>C</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>const</span> <span class=n>uint</span> <span class=n>x</span> <span class=o>=</span> <span class=n>blockIdx</span><span class=p>.</span><span class=n>x</span> <span class=o>*</span> <span class=n>blockDim</span><span class=p>.</span><span class=n>x</span> <span class=o>+</span> <span class=n>threadIdx</span><span class=p>.</span><span class=n>x</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=k>const</span> <span class=n>uint</span> <span class=n>y</span> <span class=o>=</span> <span class=n>blockIdx</span><span class=p>.</span><span class=n>y</span> <span class=o>*</span> <span class=n>blockDim</span><span class=p>.</span><span class=n>y</span> <span class=o>+</span> <span class=n>threadIdx</span><span class=p>.</span><span class=n>y</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=n>x</span> <span class=o>&lt;</span> <span class=n>M</span> <span class=o>&amp;&amp;</span> <span class=n>y</span> <span class=o>&lt;</span> <span class=n>N</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>float</span> <span class=n>tmp</span> <span class=o>=</span> <span class=mf>0.0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>K</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>tmp</span> <span class=o>+=</span> <span class=n>A</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>K</span> <span class=o>+</span> <span class=n>i</span><span class=p>]</span> <span class=o>*</span> <span class=n>B</span><span class=p>[</span><span class=n>i</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>C</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>]</span> <span class=o>=</span> <span class=n>alpha</span> <span class=o>*</span> <span class=n>tmp</span> <span class=o>+</span> <span class=n>beta</span> <span class=o>*</span> <span class=n>C</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>When I run this kernel on an A6000 GPU it achieves ~300 GFLOPs when
+multiplying two 4092×4092 float32 matrices.<label for=sn-44602fdfdbc819199a0a4d6fcb203a4d-4 class="margin-toggle sidenote-number"></label>
+<input type=checkbox id=sn-44602fdfdbc819199a0a4d6fcb203a4d-4 class=margin-toggle>
+<span class=sidenote>For two 4092²
+matrices, total FLOPs = 2·4092³ + 4092² ≈ 137 GFLOP. The memory traffic is
+dominated by repeatedly reloading the same row/column from global memory:
+about 548 GB of traffic against a peak bandwidth of 768 GB/s.</span>
+We can do <em>much</em> better.<label for=mf-44602fdfdbc819199a0a4d6fcb203a4d-5 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=mf-44602fdfdbc819199a0a4d6fcb203a4d-5 class=margin-toggle>
+<span class=marginnote><img src=https://siboehm.com/assets/img/CUDA-MMM/Tile_quantization.png alt="Tile quantization" style=max-width:100%;display:block;margin-bottom:.5em>
+<em>Tile quantization</em>: when the matrix dimension isn&rsquo;t a multiple of the tile size, the last row/column of tiles does partially wasted work.</span></p><h2 id=kernel-2-global-memory-coalescing>Kernel 2: Global Memory Coalescing</h2><p>Threads with neighbouring <code>threadId</code> are grouped into <em>warps</em> of 32. A warp is
+the unit of scheduling on the GPU; sequential memory accesses by threads in
+the same warp can be coalesced into a single 32-byte memory transaction.</p><label for=mn-44602fdfdbc819199a0a4d6fcb203a4d-6 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=mn-44602fdfdbc819199a0a4d6fcb203a4d-6 class=margin-toggle>
+<span class=marginnote>Coalescing is a property of the warp&rsquo;s memory access
+<em>pattern</em>, not of the individual address. Even non-consecutive but
+warp-contiguous accesses can be coalesced.</span><p>The naive kernel maps <code>(threadIdx.x, threadIdx.y)</code> to <code>(x, y)</code> such that
+neighbouring threads in a warp end up reading from <em>different rows</em> of <code>A</code> —
+which prevents coalescing. Swapping the assignment fixes this:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>const</span> <span class=kt>int</span> <span class=n>x</span> <span class=o>=</span> <span class=n>blockIdx</span><span class=p>.</span><span class=n>x</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=p>(</span><span class=n>threadIdx</span><span class=p>.</span><span class=n>x</span> <span class=o>/</span> <span class=n>BLOCKSIZE</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=k>const</span> <span class=kt>int</span> <span class=n>y</span> <span class=o>=</span> <span class=n>blockIdx</span><span class=p>.</span><span class=n>y</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=p>(</span><span class=n>threadIdx</span><span class=p>.</span><span class=n>x</span> <span class=o>%</span> <span class=n>BLOCKSIZE</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=p>(</span><span class=n>x</span> <span class=o>&lt;</span> <span class=n>M</span> <span class=o>&amp;&amp;</span> <span class=n>y</span> <span class=o>&lt;</span> <span class=n>N</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kt>float</span> <span class=n>tmp</span> <span class=o>=</span> <span class=mf>0.0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>K</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>tmp</span> <span class=o>+=</span> <span class=n>A</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>K</span> <span class=o>+</span> <span class=n>i</span><span class=p>]</span> <span class=o>*</span> <span class=n>B</span><span class=p>[</span><span class=n>i</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>C</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>]</span> <span class=o>=</span> <span class=n>alpha</span> <span class=o>*</span> <span class=n>tmp</span> <span class=o>+</span> <span class=n>beta</span> <span class=o>*</span> <span class=n>C</span><span class=p>[</span><span class=n>x</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>y</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>Memory throughput jumps from 15 GB/s to 110 GB/s, and performance reaches
+~2000 GFLOPs.</p><h2 id=kernel-3-shared-memory-cache-blocking>Kernel 3: Shared Memory Cache-Blocking</h2><p>Each block has access to a small chunk of fast on-chip <em>shared memory</em> (SMEM):
+on the A6000, up to 48 KB per block.<label for=sn-44602fdfdbc819199a0a4d6fcb203a4d-7 class="margin-toggle sidenote-number"></label>
+<input type=checkbox id=sn-44602fdfdbc819199a0a4d6fcb203a4d-7 class=margin-toggle>
+<span class=sidenote>On Volta, SMEM provides
+~12,080 GiB/s of bandwidth versus ~750 GB/s for global memory — a 16×
+difference.</span>
+The next optimization is to cache tiles of <code>A</code>
+and <code>B</code> in SMEM and reuse them across many threads:</p><figure><label for=sf-44602fdfdbc819199a0a4d6fcb203a4d-8 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=sf-44602fdfdbc819199a0a4d6fcb203a4d-8 class=margin-toggle>
+<span class=marginnote>Each block loads a <code>BLOCKSIZE×BLOCKSIZE</code> tile of <code>A</code> and <code>B</code> into shared
+memory, then every thread in the block performs its dot-product against the
+shared tiles.</span>
+<img src=https://siboehm.com/assets/img/CUDA-MMM/naive-kernel.png alt="Cache-blocking with SMEM tiles"></figure><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>A</span> <span class=o>+=</span> <span class=n>cRow</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>*</span> <span class=n>K</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>B</span> <span class=o>+=</span> <span class=n>cCol</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>C</span> <span class=o>+=</span> <span class=n>cRow</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>cCol</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kt>float</span> <span class=n>tmp</span> <span class=o>=</span> <span class=mf>0.0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>bkIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>&lt;</span> <span class=n>K</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>+=</span> <span class=n>BLOCKSIZE</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>As</span><span class=p>[</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>]</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=n>A</span><span class=p>[</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>K</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=n>Bs</span><span class=p>[</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>]</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=n>B</span><span class=p>[</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>A</span> <span class=o>+=</span> <span class=n>BLOCKSIZE</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>B</span> <span class=o>+=</span> <span class=n>BLOCKSIZE</span> <span class=o>*</span> <span class=n>N</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=kt>int</span> <span class=n>dotIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>dotIdx</span> <span class=o>&lt;</span> <span class=n>BLOCKSIZE</span><span class=p>;</span> <span class=o>++</span><span class=n>dotIdx</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>tmp</span> <span class=o>+=</span> <span class=n>As</span><span class=p>[</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=n>dotIdx</span><span class=p>]</span> <span class=o>*</span>
+</span></span><span class=line><span class=cl>           <span class=n>Bs</span><span class=p>[</span><span class=n>dotIdx</span> <span class=o>*</span> <span class=n>BLOCKSIZE</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>This kernel achieves ~2200 GFLOPs, a 50% improvement over the previous
+version. We&rsquo;re still bottlenecked on memory — but now on SMEM bandwidth, not
+GMEM.</p><figure class=fullwidth><img src=/images/cuda-mmm/memory-hierarchy.png alt="GPU memory hierarchy"><figcaption>GPU memory hierarchy on A100. Registers and SMEM sit close to the SMs and are
+orders of magnitude faster than global memory.</figcaption></figure><h2 id=kernel-4-1d-blocktiling>Kernel 4: 1D Blocktiling</h2><p>Computing multiple <code>C</code> entries per thread allows us to perform more of the
+work in registers, where bandwidth is effectively unlimited:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=kt>float</span> <span class=n>threadResults</span><span class=p>[</span><span class=n>TM</span><span class=p>]</span> <span class=o>=</span> <span class=p>{</span><span class=mf>0.0</span><span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>bkIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>&lt;</span> <span class=n>K</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>+=</span> <span class=n>BK</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>As</span><span class=p>[</span><span class=n>innerRowA</span> <span class=o>*</span> <span class=n>BK</span> <span class=o>+</span> <span class=n>innerColA</span><span class=p>]</span> <span class=o>=</span> <span class=n>A</span><span class=p>[</span><span class=n>innerRowA</span> <span class=o>*</span> <span class=n>K</span> <span class=o>+</span> <span class=n>innerColA</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=n>Bs</span><span class=p>[</span><span class=n>innerRowB</span> <span class=o>*</span> <span class=n>BN</span> <span class=o>+</span> <span class=n>innerColB</span><span class=p>]</span> <span class=o>=</span> <span class=n>B</span><span class=p>[</span><span class=n>innerRowB</span> <span class=o>*</span> <span class=n>N</span> <span class=o>+</span> <span class=n>innerColB</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>A</span> <span class=o>+=</span> <span class=n>BK</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>B</span> <span class=o>+=</span> <span class=n>BK</span> <span class=o>*</span> <span class=n>N</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>dotIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>dotIdx</span> <span class=o>&lt;</span> <span class=n>BK</span><span class=p>;</span> <span class=o>++</span><span class=n>dotIdx</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>float</span> <span class=n>Btmp</span> <span class=o>=</span> <span class=n>Bs</span><span class=p>[</span><span class=n>dotIdx</span> <span class=o>*</span> <span class=n>BN</span> <span class=o>+</span> <span class=n>threadCol</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>resIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>resIdx</span> <span class=o>&lt;</span> <span class=n>TM</span><span class=p>;</span> <span class=o>++</span><span class=n>resIdx</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>threadResults</span><span class=p>[</span><span class=n>resIdx</span><span class=p>]</span> <span class=o>+=</span>
+</span></span><span class=line><span class=cl>          <span class=n>As</span><span class=p>[(</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>TM</span> <span class=o>+</span> <span class=n>resIdx</span><span class=p>)</span> <span class=o>*</span> <span class=n>BK</span> <span class=o>+</span> <span class=n>dotIdx</span><span class=p>]</span> <span class=o>*</span> <span class=n>Btmp</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>This kernel achieves ~8600 GFLOPs, 2.2× faster than Kernel 3.</p><h2 id=kernel-5-2d-blocktiling>Kernel 5: 2D Blocktiling</h2><p>Now compute an <code>8×8</code> grid per thread instead of a column. Sharing more inputs
+across the per-thread grid increases arithmetic intensity:</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=kt>float</span> <span class=n>threadResults</span><span class=p>[</span><span class=n>TM</span> <span class=o>*</span> <span class=n>TN</span><span class=p>]</span> <span class=o>=</span> <span class=p>{</span><span class=mf>0.0</span><span class=p>};</span>
+</span></span><span class=line><span class=cl><span class=kt>float</span> <span class=n>regM</span><span class=p>[</span><span class=n>TM</span><span class=p>]</span> <span class=o>=</span> <span class=p>{</span><span class=mf>0.0</span><span class=p>};</span>
+</span></span><span class=line><span class=cl><span class=kt>float</span> <span class=n>regN</span><span class=p>[</span><span class=n>TN</span><span class=p>]</span> <span class=o>=</span> <span class=p>{</span><span class=mf>0.0</span><span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>bkIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>&lt;</span> <span class=n>K</span><span class=p>;</span> <span class=n>bkIdx</span> <span class=o>+=</span> <span class=n>BK</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// ... cooperative GMEM → SMEM loads ...
+</span></span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>dotIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>dotIdx</span> <span class=o>&lt;</span> <span class=n>BK</span><span class=p>;</span> <span class=o>++</span><span class=n>dotIdx</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>TM</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=n>regM</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>=</span> <span class=n>As</span><span class=p>[(</span><span class=n>threadRow</span> <span class=o>*</span> <span class=n>TM</span> <span class=o>+</span> <span class=n>i</span><span class=p>)</span> <span class=o>*</span> <span class=n>BK</span> <span class=o>+</span> <span class=n>dotIdx</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>TN</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=n>regN</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>=</span> <span class=n>Bs</span><span class=p>[</span><span class=n>dotIdx</span> <span class=o>*</span> <span class=n>BN</span> <span class=o>+</span> <span class=n>threadCol</span> <span class=o>*</span> <span class=n>TN</span> <span class=o>+</span> <span class=n>i</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>m</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>m</span> <span class=o>&lt;</span> <span class=n>TM</span><span class=p>;</span> <span class=o>++</span><span class=n>m</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>n</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>n</span> <span class=o>&lt;</span> <span class=n>TN</span><span class=p>;</span> <span class=o>++</span><span class=n>n</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=n>threadResults</span><span class=p>[</span><span class=n>m</span> <span class=o>*</span> <span class=n>TN</span> <span class=o>+</span> <span class=n>n</span><span class=p>]</span> <span class=o>+=</span> <span class=n>regM</span><span class=p>[</span><span class=n>m</span><span class=p>]</span> <span class=o>*</span> <span class=n>regN</span><span class=p>[</span><span class=n>n</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=n>__syncthreads</span><span class=p>();</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>Result: ~16 TFLOPs, another 2× improvement.</p><h2 id=kernel-6-vectorized-memory-access>Kernel 6: Vectorized Memory Access</h2><p>Two tweaks: transpose <code>As</code> during the GMEM→SMEM copy so we can issue 128-bit
+SMEM loads (<code>LDS.128</code>); use <code>float4</code> for global loads.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=n>float4</span> <span class=n>tmp</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>    <span class=k>reinterpret_cast</span><span class=o>&lt;</span><span class=n>float4</span> <span class=o>*&gt;</span><span class=p>(</span><span class=o>&amp;</span><span class=n>A</span><span class=p>[</span><span class=n>innerRowA</span> <span class=o>*</span> <span class=n>K</span> <span class=o>+</span> <span class=n>innerColA</span> <span class=o>*</span> <span class=mi>4</span><span class=p>])[</span><span class=mi>0</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=c1>// transpose A during GMEM → SMEM transfer
+</span></span></span><span class=line><span class=cl><span class=n>As</span><span class=p>[(</span><span class=n>innerColA</span> <span class=o>*</span> <span class=mi>4</span> <span class=o>+</span> <span class=mi>0</span><span class=p>)</span> <span class=o>*</span> <span class=n>BM</span> <span class=o>+</span> <span class=n>innerRowA</span><span class=p>]</span> <span class=o>=</span> <span class=n>tmp</span><span class=p>.</span><span class=n>x</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>As</span><span class=p>[(</span><span class=n>innerColA</span> <span class=o>*</span> <span class=mi>4</span> <span class=o>+</span> <span class=mi>1</span><span class=p>)</span> <span class=o>*</span> <span class=n>BM</span> <span class=o>+</span> <span class=n>innerRowA</span><span class=p>]</span> <span class=o>=</span> <span class=n>tmp</span><span class=p>.</span><span class=n>y</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>As</span><span class=p>[(</span><span class=n>innerColA</span> <span class=o>*</span> <span class=mi>4</span> <span class=o>+</span> <span class=mi>2</span><span class=p>)</span> <span class=o>*</span> <span class=n>BM</span> <span class=o>+</span> <span class=n>innerRowA</span><span class=p>]</span> <span class=o>=</span> <span class=n>tmp</span><span class=p>.</span><span class=n>z</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>As</span><span class=p>[(</span><span class=n>innerColA</span> <span class=o>*</span> <span class=mi>4</span> <span class=o>+</span> <span class=mi>3</span><span class=p>)</span> <span class=o>*</span> <span class=n>BM</span> <span class=o>+</span> <span class=n>innerRowA</span><span class=p>]</span> <span class=o>=</span> <span class=n>tmp</span><span class=p>.</span><span class=n>w</span><span class=p>;</span>
+</span></span></code></pre></div><label for=mn-44602fdfdbc819199a0a4d6fcb203a4d-10 class=margin-toggle>&#8853;</label>
+<input type=checkbox id=mn-44602fdfdbc819199a0a4d6fcb203a4d-10 class=margin-toggle>
+<span class=marginnote>The <code>reinterpret_cast</code> is purely a <em>promise</em> to the compiler
+that the pointer is 128-bit aligned — it doesn&rsquo;t generate any
+instructions.</span><p>GMEM loads upgrade from <code>LDG.E</code> (32 bits) to <code>LDG.E.128</code> (128 bits), giving
+~3% additional headroom for ~19 TFLOPs.</p><h2 id=kernel-9-autotuning>Kernel 9: Autotuning</h2><p>The optimal <code>(BM, BN, BK, TM, TN)</code> parameters vary across GPU models. Sweeping
+the parameter space with a small autotuner picks up another few percent — on
+the A6000, <code>BM=BN=128, BK=16, TM=TN=8</code> reaches 20 TFLOPs.</p><h2 id=kernel-10-warptiling>Kernel 10: Warptiling</h2><p>Adding a <em>warp</em> level to the tiling hierarchy makes all three levels of
+parallelism explicit: blocks → warps → threads.</p><div class=highlight><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>for</span> <span class=p>(</span><span class=n>uint</span> <span class=n>dotIdx</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=n>dotIdx</span> <span class=o>&lt;</span> <span class=n>BK</span><span class=p>;</span> <span class=o>++</span><span class=n>dotIdx</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=c1>// load WMITER × TM A-fragments and WNITER × TN B-fragments into regs
+</span></span></span><span class=line><span class=cl>  <span class=c1>// outer-product accumulate into threadResults[]
+</span></span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></div><p>Different warps execute on different schedulers, SMEM bank conflicts only
+matter within-warp, and register caching wins more locality. Result: 21.7
+TFLOPs — 93.7% of cuBLAS.</p><h2 id=conclusion>Conclusion</h2><p>Optimizing SGEMM iteratively is one of the best ways to deeply understand the
+performance characteristics of GPU hardware. There&rsquo;s a clear power-law:
+roughly the first 80% comes from a handful of well-known optimizations, and
+the last 15% requires a lot more work — autotuning, warptiling, and careful
+attention to instruction mix.</p><h2 id=references>References</h2><ol><li>Si Boehm. <em>How to Optimize a CUDA Matmul Kernel for cuBLAS-like
+Performance: a Worklog.</em> 2022.
+<a href=https://siboehm.com/articles/22/CUDA-MMM>https://siboehm.com/articles/22/CUDA-MMM</a></li><li>NVIDIA. <em>CUDA C++ Programming Guide.</em>
+<a href=https://docs.nvidia.com/cuda/cuda-c-programming-guide/>https://docs.nvidia.com/cuda/cuda-c-programming-guide/</a></li><li>NVIDIA. <em>CUDA C++ Best Practices Guide.</em>
+<a href=https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/>https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/</a></li><li>NVIDIA. <em>Kernel Profiling Guide (Nsight Compute).</em>
+<a href=https://docs.nvidia.com/nsight-compute/ProfilingGuide/>https://docs.nvidia.com/nsight-compute/ProfilingGuide/</a></li><li>Vasily Volkov. <em>Understanding Latency Hiding on GPUs.</em> PhD thesis, UC
+Berkeley, 2016.</li><li>NVIDIA. <em>CUTLASS: Fast Linear Algebra in CUDA C++.</em>
+<a href=https://github.com/NVIDIA/cutlass>https://github.com/NVIDIA/cutlass</a></li><li>Source code for this post: <a href=https://github.com/siboehm/SGEMM_CUDA>github.com/siboehm/SGEMM_CUDA</a></li></ol></section><p class=subtitle>Tags: cuda, gpu, performance, matmul</p><footer><p class=subtitle>&copy; 2026 Pablo Delgado
+&#183;
+<a href=https://github.com/pablete>GitHub</a>
+&#183;
+<a href=https://x.com/pablete>X</a>
+&#183;
+<a href=https://www.linkedin.com/in/pabloadelgado/>LinkedIn</a></p></footer></article></body></html>

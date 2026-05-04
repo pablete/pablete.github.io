@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Matmul on Share what you know</title><link>https://pablodelgado.org/tags/matmul/</link><description>Recent content in Matmul on Share what you know</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 25 Apr 2026 12:00:00 +0000</lastBuildDate><atom:link href="https://pablodelgado.org/tags/matmul/index.xml" rel="self" type="application/rss+xml"/><item><title>How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance: a Worklog</title><link>https://pablodelgado.org/posts/2026/04/25/first-post/</link><pubDate>Sat, 25 Apr 2026 12:00:00 +0000</pubDate><guid>https://pablodelgado.org/posts/2026/04/25/first-post/</guid><description>&lt;p&gt;In this post, I&amp;rsquo;ll iteratively optimize an implementation of matrix multiplication
+written in CUDA.&lt;label for="sn-44602fdfdbc819199a0a4d6fcb203a4d-0" class="margin-toggle sidenote-number"&gt;&lt;/label&gt;
+&lt;input type="checkbox" id="sn-44602fdfdbc819199a0a4d6fcb203a4d-0" class="margin-toggle"/&gt;
+&lt;span class="sidenote"&gt;This post is a recreation of &lt;a href="https://siboehm.com/articles/22/CUDA-MMM"&gt;Si Boehm&amp;rsquo;s excellent
+worklog&lt;/a&gt;, used here as a template to
+demonstrate Tufte-CSS features: side notes, margin notes, side figures,
+full-width figures, code blocks, and references.&lt;/span&gt;
+
+My goal is not to build a cuBLAS replacement, but to deeply understand the most
+important performance characteristics of the GPUs that are used for modern deep
+learning. This includes coalescing global memory accesses, shared memory caching
+and occupancy optimizations, among others.&lt;/p&gt;</description></item></channel></rss>
