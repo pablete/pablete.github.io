@@ -1,0 +1,5 @@
+{{- $id := .Get 0 | default (.Get "id") -}}
+<div class="video-embed">
+  <iframe src="https://player.vimeo.com/video/{{ $id }}" allowfullscreen
+    title="Vimeo video" loading="lazy"></iframe>
+</div>

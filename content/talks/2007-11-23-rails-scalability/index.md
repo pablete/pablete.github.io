@@ -1,7 +1,9 @@
 ---
-title: "Talking at Conferencia Rails. Madrid 2007"
+title: "Rails Scalability"
 date: 2007-11-23T12:00:00Z
-slug: conferencia-rails-2007-madrid
+slug: rails-scalability
+event: "Conferencia Rails 2007"
+city: "Madrid"
 tags: ["ruby", "rails", "scalability"]
 categories: ["talks"]
 ---
@@ -31,8 +33,8 @@ The talk went fine, I have had so much fun speaking spanish again.
 
 Here are some photos:
 
-![Conferencia Rails 2007](/photos/0001_large.jpg)
-
-![Merb framework](/photos/0002_large.jpg)
-
-![Rails stack](/photos/0003_large.jpg)
+{{< gallery >}}
+![Conferencia Rails 2007](0001_large.jpg)
+![Merb framework](0002_large.jpg)
+![Rails stack](0003_large.jpg)
+{{< /gallery >}}

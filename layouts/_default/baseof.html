@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} &middot; {{ site.Title }}{{ end }}</title>
   <link rel="stylesheet" href="{{ "css/tufte.css" | relURL }}">
+  <link rel="stylesheet" href="{{ "css/chroma.css" | relURL }}">
   <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
   {{ with .OutputFormats.Get "RSS" }}
     <link rel="alternate" type="application/rss+xml" href="{{ .RelPermalink }}" title="{{ site.Title }}">
@@ -17,10 +18,14 @@
         <a href="{{ "/" | relURL }}">{{ site.Title }}</a>
         &middot;
         <a href="{{ "/" | relURL }}">Home</a>
+        {{ if site.Params.showPosts }}
         &middot;
         <a href="{{ "/posts/" | relURL }}">Posts</a>
+        {{ end }}
         &middot;
         <a href="{{ "/talks/" | relURL }}">Talks</a>
+        &middot;
+        <a href="{{ "/arxiv/" | relURL }}">arXiv</a>
         &middot;
         <a href="{{ "/about/" | relURL }}">About</a>
       </nav>

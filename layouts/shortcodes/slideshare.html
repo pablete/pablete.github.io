@@ -1,4 +1,5 @@
 {{- $id := .Get 0 -}}
-<iframe src="https://www.slideshare.net/slideshow/embed_code/key/{{ $id }}"
-  width="595" height="485" frameborder="0" marginwidth="0" marginheight="0"
-  scrolling="no" allowfullscreen></iframe>
+<div class="video-embed">
+  <iframe src="https://www.slideshare.net/slideshow/embed_code/key/{{ $id }}"
+    allowfullscreen loading="lazy"></iframe>
+</div>

@@ -47,7 +47,7 @@ block have access to the same shared memory region (SMEM).
 The number of threads in a block is configurable, usually a multiple of 32.
 The number of blocks in a grid depends on the size of the data.
 
-{{< sidefigure src="/images/cuda-mmm/naive-kernel.png" alt="Naive kernel: each thread computes one C entry" >}}
+{{< sidefigure src="https://siboehm.com/assets/img/CUDA-MMM/CUDA_thread_hierarchy.png" alt="Naive kernel: each thread computes one C entry" >}}
 Each thread computes one element of `C` by reading a row of `A` and a column
 of `B`.
 {{< /sidefigure >}}
@@ -55,7 +55,7 @@ of `B`.
 Let's start by writing the most naive kernel: one thread per output entry of
 `C`. The launch looks like this:
 
-```cuda
+```cpp
 // create as many blocks as necessary to map all of C
 dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
 // 32 * 32 = 1024 thread per block
@@ -66,7 +66,7 @@ sgemm_naive<<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 The kernel body computes the dot product of one row of `A` with one column of
 `B`:
 
-```cuda
+```cpp
 __global__ void sgemm_naive(int M, int N, int K, float alpha,
                             const float *A, const float *B,
                             float beta, float *C) {
@@ -88,7 +88,7 @@ multiplying two 4092×4092 float32 matrices.{{< sidenote >}}For two 4092²
 matrices, total FLOPs = 2·4092³ + 4092² ≈ 137 GFLOP. The memory traffic is
 dominated by repeatedly reloading the same row/column from global memory:
 about 548 GB of traffic against a peak bandwidth of 768 GB/s.{{< /sidenote >}}
-We can do *much* better.
+We can do *much* better.{{< marginfigure src="https://siboehm.com/assets/img/CUDA-MMM/Tile_quantization.png" alt="Tile quantization" >}}*Tile quantization*: when the matrix dimension isn't a multiple of the tile size, the last row/column of tiles does partially wasted work.{{< /marginfigure >}}
 
 ## Kernel 2: Global Memory Coalescing
 
@@ -104,7 +104,7 @@ The naive kernel maps `(threadIdx.x, threadIdx.y)` to `(x, y)` such that
 neighbouring threads in a warp end up reading from *different rows* of `A` —
 which prevents coalescing. Swapping the assignment fixes this:
 
-```cuda
+```cpp
 const int x = blockIdx.x * BLOCKSIZE + (threadIdx.x / BLOCKSIZE);
 const int y = blockIdx.y * BLOCKSIZE + (threadIdx.x % BLOCKSIZE);
 
@@ -128,13 +128,13 @@ on the A6000, up to 48 KB per block.{{< sidenote >}}On Volta, SMEM provides
 difference.{{< /sidenote >}} The next optimization is to cache tiles of `A`
 and `B` in SMEM and reuse them across many threads:
 
-{{< sidefigure src="/images/cuda-mmm/cache-blocking.png" alt="Cache-blocking with SMEM tiles" >}}
+{{< sidefigure src="https://siboehm.com/assets/img/CUDA-MMM/naive-kernel.png" alt="Cache-blocking with SMEM tiles" >}}
 Each block loads a `BLOCKSIZE×BLOCKSIZE` tile of `A` and `B` into shared
 memory, then every thread in the block performs its dot-product against the
 shared tiles.
 {{< /sidefigure >}}
 
-```cuda
+```cpp
 A += cRow * BLOCKSIZE * K;
 B += cCol * BLOCKSIZE;
 C += cRow * BLOCKSIZE * N + cCol * BLOCKSIZE;
@@ -173,7 +173,7 @@ orders of magnitude faster than global memory.
 Computing multiple `C` entries per thread allows us to perform more of the
 work in registers, where bandwidth is effectively unlimited:
 
-```cuda
+```cpp
 float threadResults[TM] = {0.0};
 
 for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
@@ -202,7 +202,7 @@ This kernel achieves ~8600 GFLOPs, 2.2× faster than Kernel 3.
 Now compute an `8×8` grid per thread instead of a column. Sharing more inputs
 across the per-thread grid increases arithmetic intensity:
 
-```cuda
+```cpp
 float threadResults[TM * TN] = {0.0};
 float regM[TM] = {0.0};
 float regN[TN] = {0.0};
@@ -232,7 +232,7 @@ Result: ~16 TFLOPs, another 2× improvement.
 Two tweaks: transpose `As` during the GMEM→SMEM copy so we can issue 128-bit
 SMEM loads (`LDS.128`); use `float4` for global loads.
 
-```cuda
+```cpp
 float4 tmp =
     reinterpret_cast<float4 *>(&A[innerRowA * K + innerColA * 4])[0];
 // transpose A during GMEM → SMEM transfer
@@ -260,7 +260,7 @@ the A6000, `BM=BN=128, BK=16, TM=TN=8` reaches 20 TFLOPs.
 Adding a *warp* level to the tiling hierarchy makes all three levels of
 parallelism explicit: blocks → warps → threads.
 
-```cuda
+```cpp
 for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
   // load WMITER × TM A-fragments and WNITER × TN B-fragments into regs
   // outer-product accumulate into threadResults[]

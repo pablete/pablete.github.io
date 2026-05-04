@@ -1,0 +1,14 @@
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+  <p class="subtitle">
+    {{ .Date.Format "January 2, 2006" }}
+    {{ with .Params.event }} &middot; {{ . }}{{ end }}
+    {{ with .Params.city }} &middot; {{ . }}{{ end }}
+  </p>
+  <section>
+    {{ .Content }}
+  </section>
+  {{ with .Params.tags }}
+    <p class="subtitle">Tags: {{ delimit . ", " }}</p>
+  {{ end }}
+{{ end }}

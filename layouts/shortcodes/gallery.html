@@ -1,0 +1,4 @@
+{{- $cols := .Get "cols" | default "3" -}}
+<div class="gallery" style="--gallery-cols: {{ $cols }};">
+{{ .Inner | .Page.RenderString | safeHTML }}
+</div>

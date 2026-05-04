@@ -2,6 +2,8 @@
 title: "Euruko 2009 is over"
 date: 2009-05-11T12:00:00Z
 slug: euruko-2009-is-over
+event: "Euroko European Ruby Conference 2009"
+city: "Madrid"
 tags: ["ruby"]
 categories: ["talks"]
 ---
@@ -16,13 +18,12 @@ My favorite talks were:
 
 Here are some photos I took:
 
-![Pablo Delgado](/photos/0004_large.jpg)
-
-![Joshua Sierles and Xavi Noria](/photos/0007_large.jpg)
-
-![Euruko 2009 is over](/photos/0005_large.jpg)
-
-![Spanish Ruby User Group](/photos/0008_large.jpg)
+{{< gallery >}}
+![Pablo Delgado](0004_large.jpg)
+![Joshua Sierles and Xavi Noria](0007_large.jpg)
+![Euruko 2009 is over](0005_large.jpg)
+![Spanish Ruby User Group](0008_large.jpg)
+{{< /gallery >}}
 
 The rest of the photos can be seen in flickr, just search for the tag [#euruko2009](http://www.flickr.com/photos/tags/euruko2009/)
 

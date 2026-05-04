@@ -2,6 +2,8 @@
 title: "Neo4j for Ruby on Rails"
 date: 2010-11-05T12:00:00Z
 slug: neo4j-for-ruby-on-rails
+event: "Conferencia Rails 2010"
+city: "Madrid"
 tags: ["ruby", "neo4j"]
 categories: ["talks"]
 ---
@@ -30,8 +32,8 @@ I did cover:
 
 Here are some photos (thanks @valakirka):
 
-![Pablo Delgado Neo4j: Beginning](/photos/0013_large.jpg)
+![Pablo Delgado Neo4j: Beginning](0013_large.jpg)
 
-![Pablo Delgado Neo4j: Edges](/photos/0014_large.jpg)
+![Pablo Delgado Neo4j: Edges](0014_large.jpg)
 
-![Pablo Delgado Neo4j](/photos/0015_large.jpg)
+![Pablo Delgado Neo4j](0015_large.jpg)

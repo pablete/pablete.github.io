@@ -1,0 +1,9 @@
+{{- $id := .Get "id" | default (printf "mf-%s-%d" .Page.File.UniqueID .Ordinal) -}}
+{{- $src := .Get "src" -}}
+{{- $alt := .Get "alt" | default "" -}}
+<label for="{{ $id }}" class="margin-toggle">&#8853;</label>
+<input type="checkbox" id="{{ $id }}" class="margin-toggle"/>
+<span class="marginnote">
+  <img src="{{ $src | relURL }}" alt="{{ $alt }}" style="max-width:100%; display:block; margin-bottom:0.5em;"/>
+  {{ .Inner | .Page.RenderString | safeHTML }}
+</span>

@@ -7,6 +7,7 @@ enableRobotsTXT = true
   subtitle = "Learn what you don't"
   author = "Pablo Delgado"
   description = "Pablo Delgado's blog"
+  showPosts = false             # flip to true when ready to surface /posts/ in the nav
 
 [permalinks]
   talks = "/blog/:year/:month/:day/:slug/"
@@ -17,6 +18,8 @@ enableRobotsTXT = true
     unsafe = true
   [markup.highlight]
     noClasses = false
+    lineNos = false
+    tabWidth = 2
 
 [outputs]
   home = ["HTML", "RSS"]

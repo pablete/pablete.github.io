@@ -1,0 +1,21 @@
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+  <section>
+    <ul class="talks-list">
+      {{ range (where site.RegularPages "Section" "talks").ByDate.Reverse }}
+        {{ $page := . }}
+        <li>
+          <div>
+            <span class="subtitle">[{{ .Date.Format "2006-01-02" }}]</span>
+            <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          </div>
+          {{ if or .Params.event .Params.city }}
+            <div class="subtitle talk-event">
+              {{ with .Params.event }}{{ . }}{{ end }}{{ with $page.Params.city }}{{ if $page.Params.event }}, {{ end }}{{ . }}{{ end }}
+            </div>
+          {{ end }}
+        </li>
+      {{ end }}
+    </ul>
+  </section>
+{{ end }}
