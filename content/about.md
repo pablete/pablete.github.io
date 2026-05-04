@@ -1,5 +1,6 @@
 ---
 title: "About"
+subtitle: "Hi, I am Pablo Delgado"
 ---
 
 I am a Machine Learning / Research Engineer currently working at Netflix. I have a disproportionate passion about computer vision and diffusion-based generative models.

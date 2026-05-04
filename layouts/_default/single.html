@@ -1,6 +1,10 @@
 {{ define "main" }}
   <h1>{{ .Title }}</h1>
-  <p class="subtitle">{{ .Date.Format "January 2, 2006" }}</p>
+  {{ if .Params.subtitle }}
+    <p class="subtitle">{{ .Params.subtitle }}</p>
+  {{ else if not .Date.IsZero }}
+    <p class="subtitle">{{ .Date.Format "January 2, 2006" }}</p>
+  {{ end }}
   <section>
     {{ .Content }}
   </section>
